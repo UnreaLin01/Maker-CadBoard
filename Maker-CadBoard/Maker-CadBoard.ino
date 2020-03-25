@@ -1,42 +1,44 @@
-#define Mux1A A3
-#define Mux1B A4
-#define Mux1C A5
-#define Mux1Input 2
+#include "Keyboard.h"
+#define MuxA 4
+#define MuxB 5
+#define MuxC 6
 
-boolean preSw1 = false;
-boolean preSw2 = false;
-boolean preSw3 = false;
-boolean preSw4 = false;
-boolean preSw5 = false;
-boolean preSw6 = false;
-boolean preSw7 = false;
-boolean preSw8 = false;
+#define Mux1Input A4
+#define Mux2Input A5
 
+boolean nowSw[12];
+boolean preSw[12];
+byte funcSw[12] = {102, 103, 104, 99, 100, 101, 96, 97, 98, 105, 110, 108};
 
 void setup() {
   Serial.begin(115200);
-  
-  pinMode(Mux1A,OUTPUT);
-  pinMode(Mux1B,OUTPUT);
-  pinMode(Mux1C,OUTPUT);
+  Keyboard.begin();
+  pinMode(MuxA,OUTPUT);
+  pinMode(MuxB,OUTPUT);
+  pinMode(MuxC,OUTPUT);
   pinMode(Mux1Input,INPUT);
+  pinMode(Mux2Input,INPUT);
 }
-
 void loop() {
-  Serial.print(readMux1(0, 0, 0));
-  Serial.print(readMux1(0, 0, 1));
-  Serial.print(readMux1(0, 1, 0));
-  Serial.print(readMux1(0, 1, 1));
-  Serial.print(readMux1(1, 0, 0));
-  Serial.print(readMux1(1, 0, 1));
-  Serial.print(readMux1(1, 1, 0));
-  Serial.print(readMux1(1, 1, 1));
+  for(int x = 0; x <= 5; x++){
+    digitalWrite(MuxA, (x & 0b00000001));
+    digitalWrite(MuxB, ((x & 0b00000010) >> 1));
+    digitalWrite(MuxC, ((x & 0b00000100) >> 2));
+    nowSw[x] = digitalRead(Mux1Input);
+    nowSw[x+6] = digitalRead(Mux2Input);
+  }
+  for(int x = 0; x<= 11; x++){
+    Serial.print(nowSw[x]);
+  }
   Serial.println();
-}
 
-boolean readMux1(boolean c,boolean b, boolean a){
-  digitalWrite(Mux1A,a);
-  digitalWrite(Mux1B,b);
-  digitalWrite(Mux1C,c);
-  return digitalRead(Mux1Input);
+  for(int x = 0; x <= 11; x++){
+    if(preSw[x] == HIGH && nowSw[x] == LOW){
+      Keyboard.press(funcSw[x]);
+    }else if(preSw[x] == LOW && nowSw[x] == HIGH){
+      Keyboard.release(funcSw[x]);
+    }
+    preSw[x] = nowSw[x];
+  }
+ 
 }
