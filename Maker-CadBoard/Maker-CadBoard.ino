@@ -1,23 +1,36 @@
 #include "Keyboard.h"
-#define MuxA 4
-#define MuxB 5
-#define MuxC 6
 
-#define Mux1Input A4
-#define Mux2Input A5
+#define VCC 8
+#define GND 7
+
+#define MuxA 2
+#define MuxB 3
+#define MuxC 4
+#define Mux1Input 5
+#define Mux2Input 6
+
+#define LED 13
 
 boolean nowSw[12];
 boolean preSw[12];
-byte funcSw[12] = {102, 103, 104, 99, 100, 101, 96, 97, 98, 105, 110, 108};
+byte funcSw[12] = {KEY_ESC, '7', '4', '1', '2', '5', '8', '0', KEY_RETURN, '9', '6', '3'};
 
 void setup() {
   Serial.begin(115200);
   Keyboard.begin();
+
+  pinMode(VCC,OUTPUT);
+  pinMode(GND,OUTPUT);
+  digitalWrite(VCC,HIGH);
+  digitalWrite(GND,LOW);
+  
   pinMode(MuxA,OUTPUT);
   pinMode(MuxB,OUTPUT);
   pinMode(MuxC,OUTPUT);
   pinMode(Mux1Input,INPUT);
   pinMode(Mux2Input,INPUT);
+
+  pinMode(LED,OUTPUT);
 }
 void loop() {
   for(int x = 0; x <= 5; x++){
@@ -31,7 +44,7 @@ void loop() {
     Serial.print(nowSw[x]);
   }
   Serial.println();
-
+  
   for(int x = 0; x <= 11; x++){
     if(preSw[x] == HIGH && nowSw[x] == LOW){
       Keyboard.press(funcSw[x]);
