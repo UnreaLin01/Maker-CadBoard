@@ -1,5 +1,6 @@
-#include <Keyboard.h>
-#include <FastLED.h>
+//#include "HID-Project.h"
+#include "Keyboard.h"
+#include "FastLED.h"
 
 #define LED_DATA_PIN 13
 #define LED_IC WS2812B
@@ -45,13 +46,14 @@ CRGB leds[LED_NUMS];
 #define KEY_TAB 179
 #define KEY_Q 113
 #define KEY_E 101
+#define KEY_W 119
 #define KEY_R 114
 #define KEY_T 116
 #define KEY_Y 121
-#define KEY_ASTERISK 42
+#define KEY_ASTERISK 42 //NKRO Failed
 #define KEY_SLASH 47
 #define KEY_0 48
-#define KEY_DELETE 212
+//#define KEY_DELETE 212 //NKRO Failed
 
 #define KEY_CAPS_LOCK 193
 #define KEY_A 97
@@ -82,26 +84,56 @@ const byte rowNum = 10;
 const char* column[columnNum] = {COLUMN0,COLUMN1,COLUMN2,COLUMN3,COLUMN4,COLUMN5};
 const char* row[rowNum] = {ROW0,ROW1,ROW2,ROW3,ROW4,ROW5,ROW6,ROW7,ROW8,ROW9};
 
-boolean swPreviousState[6][10] = {{false}};
-boolean swState[6][10] = {{false}};
+boolean swPreviousState[columnNum][rowNum] = {{false}};
+boolean swState[columnNum][rowNum] = {{false}};
 const int swMainFunc[6][10] = {
   {KEY_ESC        ,KEY_F4         ,KEY_F7         ,KEY_F11        ,-1             ,-1             ,-1             ,-1             ,-1             ,-1             },
   {KEY_TILDE      ,KEY_1          ,KEY_2          ,KEY_3          ,KEY_4          ,KEY_5          ,KEY_6          ,KEY_7          ,KEY_8          ,KEY_9          },
-  {KEY_TAB        ,KEY_Q          ,KEY_E          ,KEY_R          ,KEY_T          ,KEY_Y          ,KEY_ASTERISK   ,KEY_SLASH      ,KEY_0          ,KEY_DELETE     },
+  {KEY_TAB        ,KEY_Q          ,KEY_W          ,KEY_E          ,KEY_R          ,KEY_T          ,KEY_Y          ,KEY_ASTERISK   ,KEY_SLASH      ,KEY_0          },
   {KEY_CAPS_LOCK  ,KEY_A          ,KEY_S          ,KEY_D          ,KEY_L          ,KEY_O          ,KEY_EQUAL      ,KEY_COMMA      ,KEY_DOT        ,-1             },
   {KEY_LEFT_SHIFT ,KEY_Z          ,KEY_X          ,KEY_C          ,KEY_V          ,KEY_M          ,KEY_HYPHEN     ,KEY_LEFT_ARROW ,KEY_RIGHT_ARROW,-1             },
   {KEY_LEFT_CTRL  ,KEY_LEFT_ALT   ,-1             ,KEY_SPACE      ,-1             ,-1             ,-1             ,-1             ,-1             ,-1             }          
 };
 
+
+const byte keyLedMap[columnNum][rowNum] = {
+  {10,11,12,13, 0, 0, 0, 0, 0, 0},
+  {14,15,16,17,18,19,20,21,22,23},
+  {24,25,26,27,28,29,30,31,32,33},
+  {34,35,36,37,38,39,40,41,42,-1},
+  {43,44,45,46,47,48,49,50,51,-1},
+  {52,53,54,55, 0, 0, 0, 0, 0, 0}
+};
+
+//int keyBrightness[columnNum][rowNum]
+
 void setup() {
   FastLED.addLeds<LED_IC, LED_DATA_PIN, LED_TYPE>(leds, LED_NUMS);
   FastLED.setBrightness(LED_BRIGHTNESS);
   Keyboard.begin();
-  Serial.begin(115200);
+  //NKROKeyboard.begin();
+  //Serial.begin(115200);
   for(int x = 0; x < columnNum; x++){pinMode(column[x],OUTPUT); digitalWrite(column[x],LOW);}
   for(int x = 0; x < rowNum; x++){pinMode(row[x],INPUT);}
   for(int x = 0; x < LED_NUMS; x++){leds[x] = CRGB::Black;}
   FastLED.show();
+}
+
+void swSendKey(){
+  for(int x = 0; x < columnNum; x++){
+    for(int y = 0; y < rowNum; y++){
+      if(swState[x][y] == HIGH && swPreviousState[x][y] == LOW){
+        Keyboard.press(swMainFunc[x][y]);
+        leds[keyLedMap[x][y]] = CRGB(255,255,255);
+        FastLED.setBrightness(255);
+      }else if(swState[x][y] == LOW && swPreviousState[x][y] == HIGH){
+        Keyboard.release(swMainFunc[x][y]);
+        leds[keyLedMap[x][y]] = CRGB(0,0,0);
+      }
+    }
+  }
+  FastLED.show();
+  FastLED.setBrightness(LED_BRIGHTNESS);
 }
 
 void swStateUpdate(){
@@ -109,19 +141,13 @@ void swStateUpdate(){
   for(int x = 0; x < columnNum; x++){
     digitalWrite(column[x],HIGH);
     for(int y = 0; y < rowNum; y++){swState[x][y] = digitalRead(row[y]);}
-    digitalWrite(column[x],LOW);
+    digitalWrite(column[x],LOW); 
   }
 }
-
 void loop() {
-  for(int x = 0; x < columnNum; x++){
-    for(int y = 0; y < rowNum; y++){
-      if(swState[x][y] == HIGH && swPreviousState[x][y] == LOW){
-        Keyboard.press(swMainFunc[x][y]);
-      }else if(swState[x][y] == LOW && swPreviousState[x][y] == HIGH){
-        Keyboard.release(swMainFunc[x][y]);
-      }
-    }
+  for(int x = 0; x < LED_NUMS; x++){
+    leds[x] = CHSV(x*(180/LED_NUMS)+ (millis()/15),255,255);
   }
+  swSendKey();
   swStateUpdate();
 }
